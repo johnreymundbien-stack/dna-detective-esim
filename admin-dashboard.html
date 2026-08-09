@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - DNA Detective</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0f172a;
+            color: #f1f5f9;
+        }
+    </style>
+</head>
+<body class="p-8">
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-gate" class="min-h-[80vh] flex items-center justify-center">
+        <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-xl max-w-sm w-full text-center flex flex-col gap-4 relative overflow-hidden">
+            <div class="absolute -top-12 -left-12 w-24 h-24 bg-teal-500/10 rounded-full blur-2xl"></div>
+            
+            <i class="fa-solid fa-lock text-teal-400 text-4xl mb-2 drop-shadow-md"></i>
+            <h2 class="text-2xl font-extrabold text-white">Admin Access</h2>
+            <p class="text-xs text-slate-400">Please enter the security passphrase to view cadet records.</p>
+            
+            <div class="flex flex-col gap-2 mt-2">
+                <input id="admin-password" type="password" class="bg-slate-950 border border-slate-700 text-white text-sm rounded-lg px-4 py-3 focus:outline-none focus:border-teal-500 transition-colors text-center font-mono" placeholder="Enter password...">
+                <p id="error-msg" class="text-xs text-red-500 hidden font-bold mt-1 animate-pulse">Incorrect password. Access denied.</p>
+            </div>
+            
+            <button onclick="verifyAdmin()" class="bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-500 hover:to-teal-400 text-slate-950 font-extrabold uppercase tracking-wider py-3 rounded-xl transition-all shadow-lg mt-2">
+                Unlock Dashboard
+            </button>
+            
+            <button onclick="window.location.href='index.html'" class="text-xs text-slate-500 hover:text-slate-300 mt-2 transition-colors">
+                <i class="fa-solid fa-arrow-left"></i> Return to E-SIM
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD (Hidden initially) -->
+    <div id="dashboard-content" class="max-w-6xl mx-auto hidden">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <div>
+                <span class="text-[10px] font-bold text-teal-400 uppercase tracking-widest border border-teal-800 bg-teal-950 px-2 py-0.5 rounded-full">Secure Connection Active</span>
+                <h1 class="text-3xl font-extrabold text-white mt-2">E-SIM Data Center</h1>
+            </div>
+            <button onclick="window.location.href='index.html'" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all border border-slate-700 flex items-center gap-2">
+                <i class="fa-solid fa-right-from-bracket"></i> Lock & Exit
+            </button>
+        </div>
+
+        <!-- NEW: CONTROL TOOLBAR -->
+        <div class="flex flex-wrap items-center gap-3 mb-4 bg-slate-900/60 border border-slate-800 p-3 rounded-xl">
+            <button onclick="deleteSelected()" class="bg-red-500/10 hover:bg-red-500/20 border border-red-500/40 text-red-400 px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 shadow-sm">
+                <i class="fa-solid fa-trash-can"></i> Delete Marked
+            </button>
+            <button onclick="exportSelectedCSV()" class="bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/40 text-teal-400 px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 shadow-sm">
+                <i class="fa-solid fa-file-csv"></i> Export CSV
+            </button>
+            
+            <div class="h-6 w-px bg-slate-700 mx-1 hidden sm:block"></div>
+            
+            <button onclick="sortRecords('name')" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2">
+                <i class="fa-solid fa-arrow-down-a-z"></i> Sort A-Z
+            </button>
+            <button onclick="sortRecords('school')" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2">
+                <i class="fa-solid fa-building"></i> Sort School/Section
+            </button>
+            <button onclick="fetchDatabaseRecords()" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2 ml-auto">
+                <i class="fa-solid fa-rotate-right"></i> Refresh
+            </button>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl overflow-x-auto">
+            <table class="w-full text-left text-sm border-collapse min-w-[650px]">
+                <thead>
+                    <tr class="bg-slate-950 border-b border-slate-800 text-slate-400">
+                        <!-- NEW: MASTER CHECKBOX -->
+                        <th class="p-4 text-center w-12">
+                            <input type="checkbox" id="selectAll" onclick="toggleAll(this)" class="w-4 h-4 accent-teal-500 cursor-pointer">
+                        </th>
+                        <th class="p-4 font-semibold">Date / Time</th>
+                        <th class="p-4 font-semibold">Cadet Name</th>
+                        <th class="p-4 font-semibold">Section</th>
+                        <th class="p-4 font-semibold">School</th>
+                        <th class="p-4 font-semibold text-center">Final Score</th>
+                    </tr>
+                </thead>
+                <tbody id="results-table" class="divide-y divide-slate-800/60 text-slate-300">
+                    <!-- Data will be injected here automatically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Firebase Version 8 Library Links -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <!-- Logic Script -->
+    <script>
+        // Your specific Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBQCTmtqGxmS7EnWCVvYSrzcdaq8caxcMI",
+            authDomain: "e-sim-fdb65.firebaseapp.com",
+            projectId: "e-sim-fdb65",
+            storageBucket: "e-sim-fdb65.firebasestorage.app",
+            messagingSenderId: "146842898943",
+            appId: "1:146842898943:web:269756d4541dd87dc6d7ca",
+            measurementId: "G-XGJQGGHW38"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // GLOBAL ARRAY TO HOLD RECORDS FOR SORTING & EXPORTING
+        let allRecords = [];
+        let currentSortMode = 'date';
+        let sortAscending = false;
+
+        // 1. Secure Login
+        function verifyAdmin() {
+            const passInput = document.getElementById('admin-password').value;
+            const errorMsg = document.getElementById('error-msg');
+            const hiddenEmail = "admin@admin.local"; 
+
+            auth.signInWithEmailAndPassword(hiddenEmail, passInput)
+                .then((userCredential) => {
+                    document.getElementById('login-gate').classList.add('hidden');
+                    document.getElementById('dashboard-content').classList.remove('hidden');
+                    fetchDatabaseRecords();
+                })
+                .catch((error) => {
+                    errorMsg.classList.remove('hidden');
+                    document.getElementById('admin-password').value = '';
+                });
+        }
+
+        document.getElementById("admin-password").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                verifyAdmin();
+            }
+        });
+
+        // 2. Fetch Data from Firebase and Store in Array
+        function fetchDatabaseRecords() {
+            const tableBody = document.getElementById('results-table');
+            tableBody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-teal-400 font-bold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Fetching records...</td></tr>`;
+
+            // Reset the master checkbox
+            document.getElementById('selectAll').checked = false;
+
+            db.collection("student_results").orderBy("timestamp", "desc").get().then((querySnapshot) => {
+                allRecords = []; // Clear array for fresh data
+                
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    
+                    // Attach the unique Firebase Document ID so we can delete it later
+                    data.id = doc.id; 
+                    
+                    // Format dates
+                    if (data.timestamp) {
+                        data.rawDate = data.timestamp.toDate();
+                        data.dateString = data.rawDate.toLocaleString();
+                    } else {
+                        data.rawDate = new Date(0);
+                        data.dateString = "Unknown Date";
+                    }
+                    
+                    allRecords.push(data);
+                });
+
+                // Default sorting state
+                currentSortMode = 'date';
+                sortAscending = false;
+                renderTable();
+
+            }).catch((error) => {
+                console.error("Error loading dashboard data: ", error);
+                tableBody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500 font-bold">Error loading data. Check console.</td></tr>`;
+            });
+        }
+
+        // 3. Render Table HTML from Array
+        function renderTable() {
+            const tableBody = document.getElementById('results-table');
+            tableBody.innerHTML = '';
+
+            if (allRecords.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-500 italic">No submissions recorded yet.</td></tr>`;
+                return;
+            }
+
+            allRecords.forEach((data) => {
+                tableBody.innerHTML += `
+                    <tr class="hover:bg-slate-800/50 transition-colors group">
+                        <td class="p-4 text-center">
+                            <input type="checkbox" class="record-checkbox w-4 h-4 accent-teal-500 cursor-pointer" value="${data.id}">
+                        </td>
+                        <td class="p-4 text-xs text-slate-500 font-mono">${data.dateString}</td>
+                        <td class="p-4 font-bold text-white">${data.name || 'N/A'}</td>
+                        <td class="p-4">${data.section || 'N/A'}</td>
+                        <td class="p-4">${data.school || 'N/A'}</td>
+                        <td class="p-4 text-center font-black ${data.score >= 10 ? 'text-green-400' : 'text-yellow-400'}">${data.score}/15</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // 4. Master Checkbox Logic
+        function toggleAll(source) {
+            const checkboxes = document.querySelectorAll('.record-checkbox');
+            checkboxes.forEach(cb => cb.checked = source.checked);
+        }
+
+        // 5. Delete Marked Records Logic
+        function deleteSelected() {
+            const checkboxes = document.querySelectorAll('.record-checkbox:checked');
+            if (checkboxes.length === 0) {
+                alert("Please check the box next to at least one record to delete.");
+                return;
+            }
+
+            const confirmDelete = confirm(`WARNING: You are about to permanently delete ${checkboxes.length} record(s). This cannot be undone. Proceed?`);
+            
+            if (confirmDelete) {
+                let deletePromises = [];
+                
+                // Queue up a delete command for every checked ID
+                checkboxes.forEach(cb => {
+                    deletePromises.push(db.collection("student_results").doc(cb.value).delete());
+                });
+
+                // Wait until all are deleted, then refresh the table
+                Promise.all(deletePromises).then(() => {
+                    alert(`Successfully deleted ${checkboxes.length} record(s).`);
+                    fetchDatabaseRecords(); 
+                }).catch((error) => {
+                    console.error("Error during batch delete: ", error);
+                    alert("An error occurred while deleting. Please check the console.");
+                });
+            }
+        }
+
+        // 6. Sorting Logic
+        function sortRecords(type) {
+            // Toggle direction if clicking the same sort button
+            if (currentSortMode === type) {
+                sortAscending = !sortAscending;
+            } else {
+                currentSortMode = type;
+                sortAscending = true; // Default to A-Z when a new sort is picked
+            }
+
+            allRecords.sort((a, b) => {
+                let valA, valB;
+
+                if (type === 'name') {
+                    valA = (a.name || '').toLowerCase();
+                    valB = (b.name || '').toLowerCase();
+                } else if (type === 'school') {
+                    // Combine school and section to sort accurately
+                    valA = (a.school || '').toLowerCase() + (a.section || '').toLowerCase();
+                    valB = (b.school || '').toLowerCase() + (b.section || '').toLowerCase();
+                }
+
+                if (valA < valB) return sortAscending ? -1 : 1;
+                if (valA > valB) return sortAscending ? 1 : -1;
+                return 0;
+            });
+
+            // Re-draw the table with the newly sorted array
+            renderTable();
+        }
+
+        // 7. Export Marked to CSV Logic
+        function exportSelectedCSV() {
+            const checkboxes = document.querySelectorAll('.record-checkbox:checked');
+            if (checkboxes.length === 0) {
+                alert("Please check the box next to at least one record to export.");
+                return;
+            }
+
+            // Extract the IDs of checked boxes
+            const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+            
+            // Filter our allRecords array to only match the checked IDs
+            const recordsToExport = allRecords.filter(record => selectedIds.includes(record.id));
+
+            // Set up the CSV Headers
+            let csvContent = "Date and Time,Cadet Name,Section,School,Final Score\n";
+            
+            // Format each row safely
+            recordsToExport.forEach(record => {
+                // We wrap strings in quotes to prevent commas inside names/schools from breaking the columns
+                const date = `"${record.dateString}"`;
+                const name = `"${(record.name || 'N/A').replace(/"/g, '""')}"`;
+                const section = `"${(record.section || 'N/A').replace(/"/g, '""')}"`;
+                const school = `"${(record.school || 'N/A').replace(/"/g, '""')}"`;
+                const score = record.score;
+                
+                csvContent += `${date},${name},${section},${school},${score}\n`;
+            });
+
+            // Create a Blob file and trigger an automatic download
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", "DNA_Detective_Marked_Scores.csv");
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
